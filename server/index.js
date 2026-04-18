@@ -92,6 +92,16 @@ async function getDemons() {
   }
 }
 
+function shuffle(array) {
+  let currentIndex = array.length, randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
+}
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
@@ -104,7 +114,7 @@ io.on('connection', (socket) => {
       const demonList = await getDemons();
       rooms[roomId] = {
         players: [],
-        demonList: demonList.sort(() => Math.random() - 0.5),
+        demonList: shuffle([...demonList]),
         currentIndex: 0,
         currentPercent: 1,
         isStarted: false,
@@ -113,6 +123,7 @@ io.on('connection', (socket) => {
         skipsRemaining: 1,
         skipVotes: []
       };
+      console.log(`Lobby ${roomId} initialized with ${rooms[roomId].demonList.length} shuffled demons.`);
     }
     
     const player = { id: socket.id, username, isHost, score: 0 };
@@ -186,8 +197,8 @@ io.on('connection', (socket) => {
         room.skipVotes = [];
         // Reset scores
         room.players.forEach(p => p.score = 0);
-        // Optional: Re-shuffle for variety
-        room.demonList = room.demonList.sort(() => Math.random() - 0.5);
+        // Reshuffle using unbiased Fisher-Yates
+        room.demonList = shuffle([...room.demonList]);
         
         io.to(roomId).emit('roomUpdate', room);
         io.to(roomId).emit('gameRestarted', { by: socket.username });
