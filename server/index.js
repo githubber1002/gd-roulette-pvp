@@ -28,29 +28,67 @@ async function getDemons() {
   };
   
   try {
-    // Fetch top 300 demons (1-300) to include Legacy list
-    const p1 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100', config);
-    const p2 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=100', config);
-    const p3 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=200', config);
+    // Sequential fetch to avoid rate limits/blocks
+    console.log("Fetching demons Page 1...");
+    const r1 = await axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100', config);
+    await new Promise(r => setTimeout(r, 500)); // 0.5s pause
     
-    const results = await Promise.all([p1, p2, p3]);
-    const allDemons = [...results[0].data, ...results[1].data, ...results[2].data];
+    console.log("Fetching demons Page 2...");
+    const r2 = await axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=100', config);
+    await new Promise(r => setTimeout(r, 500)); // 0.5s pause
     
+    console.log("Fetching demons Page 3...");
+    const r3 = await axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=200', config);
+    
+    const allDemons = [...r1.data, ...r2.data, ...r3.data];
     console.log(`Successfully fetched ${allDemons.length} demons from API.`);
     return allDemons;
   } catch (error) {
     console.error("CRITICAL: Pointercrate API blocked or failed:", error.message);
-    // Even bigger and better fallback list to ensure the game is still fun
-    return [
-      { name: "Bloodlust", publisher: { name: "Knobbelboy" }, position: 50 },
-      { name: "Tartarus", publisher: { name: "Riot" }, position: 20 },
-      { name: "Zodiac", publisher: { name: "Bianox" }, position: 30 },
-      { name: "Yatagarasu", publisher: { name: "Trusta" }, position: 150 },
-      { name: "Cataclysm", publisher: { name: "GGBoy" }, position: 400 },
-      { name: "BloodBath", publisher: { name: "Riot" }, position: 250 },
-      { name: "Phobos", publisher: { name: "TIGS" }, position: 350 },
-      { name: "Aftercatabath", publisher: { name: "BoyOfTheBunny" }, position: 360 }
-    ].sort(() => Math.random() - 0.5);
+    // ENORMOUS fallback list for true randomness
+    const massiveFallback = [
+      { name: "Bloodlust", publisher: { name: "Knobbelboy" } },
+      { name: "Tartarus", publisher: { name: "Riot" } },
+      { name: "Zodiac", publisher: { name: "Bianox" } },
+      { name: "Yatagarasu", publisher: { name: "Trusta" } },
+      { name: "Cataclysm", publisher: { name: "GGBoy" } },
+      { name: "BloodBath", publisher: { name: "Riot" } },
+      { name: "Phobos", publisher: { name: "TIGS" } },
+      { name: "Aftercatabath", publisher: { name: "BoyOfTheBunny" } },
+      { name: "Sonic Wave", publisher: { name: "Sunix" } },
+      { name: "Kenos", publisher: { name: "Chief" } },
+      { name: "Digital Descent", publisher: { name: "Viprin" } },
+      { name: "Artificial Ascent", publisher: { name: "Viprin" } },
+      { name: "Erebus", publisher: { name: "BoldStep" } },
+      { name: "Thinking Space", publisher: { name: "Hideki" } },
+      { name: "Promethean", publisher: { name: "EndLevel" } },
+      { name: "The Golden", publisher: { name: "Bo" } },
+      { name: "Trueffet", publisher: { name: "SyQual" } },
+      { name: "Slaughterhouse", publisher: { name: "IcedCave" } },
+      { name: "Firework", publisher: { name: "Trick" } },
+      { name: "Tidal Wave", publisher: { name: "OniLink" } },
+      { name: "Acheron", publisher: { name: "Ryamu" } },
+      { name: "Silent Clubstep", publisher: { name: "Paqoe" } },
+      { name: "A Sakupen Circles", publisher: { name: "Nick XD" } },
+      { name: "Abyss of Darkness", publisher: { name: "Exen" } },
+      { name: "Keres", publisher: { name: "ItsHybrid" } },
+      { name: "Oblivion", publisher: { name: "Dice88" } },
+      { name: "Azure Flare", publisher: { name: "Danzole" } },
+      { name: "Misanthrope", publisher: { name: "HaeSool" } },
+      { name: "Hard Machine", publisher: { name: "Kompetenz" } },
+      { name: "Limbo", publisher: { name: "MindCap" } },
+      { name: "Killbot", publisher: { name: "Lithifusion" } },
+      { name: "Requiem", publisher: { name: "Lithifusion" } },
+      { name: "Renevant", publisher: { name: "Nikrodox" } },
+      { name: "Gamma", publisher: { name: "MindCap" } },
+      { name: "Sigma", publisher: { name: "MindCap" } },
+      { name: "Omega", publisher: { name: "MindCap" } },
+      { name: "Hyper Paracosm", publisher: { name: "Viruz" } },
+      { name: "Fragile", publisher: { name: "Luz" } },
+      { name: "Visle", publisher: { name: "Xhynte" } },
+      { name: "Cold Sweat", publisher: { name: "Para" } }
+    ];
+    return massiveFallback.sort(() => Math.random() - 0.5);
   }
 }
 

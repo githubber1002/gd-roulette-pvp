@@ -238,7 +238,7 @@ function App() {
                              </button>
                              {roomData.restartVotes.length > 0 && (
                                  <div style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>
-                                     {roomData.restartVotes.length} / {Math.ceil(roomData.players.length / 2)} VOTES
+                                     {roomData.restartVotes.length} / {roomData.players.length === 2 ? 2 : Math.ceil(roomData.players.length / 2)} VOTES
                                  </div>
                              )}
                         </div>
