@@ -41,6 +41,9 @@ function App() {
     socket.on('roomUpdate', (data) => {
       console.log("Room Update received:", data);
       setRoomData(data);
+      if (data.isStarted) {
+        setView('game');
+      }
     });
 
     socket.on('connect_error', (err) => {
