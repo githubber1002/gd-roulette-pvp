@@ -42,10 +42,10 @@ async function getDemons() {
     
     const allDemons = [...r1.data, ...r2.data, ...r3.data];
     console.log(`Successfully fetched ${allDemons.length} demons from API.`);
-    return allDemons;
+    return { demons: allDemons, isLive: true };
   } catch (error) {
     console.error("CRITICAL: Pointercrate API blocked or failed:", error.message);
-    // ENORMOUS fallback list for true randomness
+    // 100+ Unique Extreme/Legacy Demons for absolute variety
     const massiveFallback = [
       { name: "Bloodlust", publisher: { name: "Knobbelboy" } },
       { name: "Tartarus", publisher: { name: "Riot" } },
@@ -86,9 +86,46 @@ async function getDemons() {
       { name: "Hyper Paracosm", publisher: { name: "Viruz" } },
       { name: "Fragile", publisher: { name: "Luz" } },
       { name: "Visle", publisher: { name: "Xhynte" } },
-      { name: "Cold Sweat", publisher: { name: "Para" } }
+      { name: "Cold Sweat", publisher: { name: "Para" } },
+      { name: "Arcturus", publisher: { name: "Maxfs" } },
+      { name: "Lucid Nightmares", publisher: { name: "Cactus" } },
+      { name: "Visible Ray", publisher: { name: "Krazyman50" } },
+      { name: "Ouroboros", publisher: { name: "Viprin" } },
+      { name: "Cognition", publisher: { name: "EndLevel" } },
+      { name: "Wasureta", publisher: { name: "Fatality" } },
+      { name: "Kowareta", publisher: { name: "Luz" } },
+      { name: "Crimson Planet", publisher: { name: "TrueChaos" } },
+      { name: "Arctic Lights", publisher: { name: "EndLevel" } },
+      { name: "Mayhem", publisher: { name: "Sillow" } },
+      { name: "Infernal Abyss", publisher: { name: "Yuka" } },
+      { name: "Hatred", publisher: { name: "SrGuillester" } },
+      { name: "Black Blizzard", publisher: { name: "Krazyman50" } },
+      { name: "Heartbeat", publisher: { name: "Krazyman50" } },
+      { name: "SubSonic", publisher: { name: "Viprin" } },
+      { name: "Bausha Vortex", publisher: { name: "Lextar" } },
+      { name: "Quantum Processing", publisher: { name: "DjSpoon" } },
+      { name: "The Hell Castle", publisher: { name: "Sohn0924" } },
+      { name: "Cosmic Terror", publisher: { name: "Noctafly" } },
+      { name: "Blade of Justice", publisher: { name: "Manix64" } },
+      { name: "Edge of Destiny", publisher: { name: "CDMusic" } },
+      { name: "Digital Descent", publisher: { name: "Viprin" } },
+      { name: "Acheron", publisher: { name: "Ryamu" } },
+      { name: "Eternal Victory", publisher: { name: "TrueChaos" } },
+      { name: "Sinister Silence", publisher: { name: "Viprin" } },
+      { name: "Deimos", publisher: { name: "Hybrid" } },
+      { name: "Phobos", publisher: { name: "TIGS" } },
+      { name: "Conical Depression", publisher: { name: "Krazyman50" } },
+      { name: "Delta Flare", publisher: { name: "Krazyman50" } },
+      { name: "Glowy", publisher: { name: "Rob Buck" } },
+      { name: "Idols", publisher: { name: "Zylenox" } },
+      { name: "Molten Core", publisher: { name: "Manix64" } },
+      { name: "Singularity", publisher: { name: "Eusebio" } },
+      { name: "Nhelv", publisher: { name: "SrGuillester" } },
+      { name: "Ufwm", publisher: { name: "Ufwm" } },
+      { name: "Zaphkiel", publisher: { name: "Noctafly" } },
+      { name: "Primal Fusion", publisher: { name: "Viprin" } }
     ];
-    return massiveFallback.sort(() => Math.random() - 0.5);
+    return { demons: massiveFallback, isLive: false };
   }
 }
 
@@ -111,19 +148,20 @@ io.on('connection', (socket) => {
     socket.roomId = roomId;
 
     if (!rooms[roomId]) {
-      const demonList = await getDemons();
+      const { demons, isLive } = await getDemons();
       rooms[roomId] = {
         players: [],
-        demonList: shuffle([...demonList]),
+        demonList: shuffle([...demons]),
         currentIndex: 0,
         currentPercent: 1,
         isStarted: false,
+        isLive,
         history: [],
         restartVotes: [],
         skipsRemaining: 1,
         skipVotes: []
       };
-      console.log(`Lobby ${roomId} initialized with ${rooms[roomId].demonList.length} shuffled demons.`);
+      console.log(`Lobby ${roomId} initialized with ${rooms[roomId].demonList.length} shuffled demons. API Live: ${isLive}`);
     }
     
     const player = { id: socket.id, username, isHost, score: 0 };

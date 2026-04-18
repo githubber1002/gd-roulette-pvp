@@ -181,6 +181,15 @@ function App() {
                     )}
                 </div>
 
+                <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: roomData.isLive ? '#00ff00' : '#ffaa00' }}></div>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
+                            {roomData.isLive ? 'API: ONLINE' : 'MODE: BACKUP'}
+                        </span>
+                    </div>
+                </div>
+
                 <div style={{ width: '100%', textAlign: 'left', marginBottom: '2rem' }}>
                     <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', marginBottom: '1rem', textTransform: 'uppercase' }}> Current Party ({roomData.players.length}) </div>
                     {roomData.players.map(p => (
@@ -210,8 +219,14 @@ function App() {
                     <span style={{ color: 'var(--accent)' }}>LEVEL {roomData.currentIndex + 1} / 100</span>
                 </div>
                 <div style={{ textAlign: 'right' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', marginBottom: '4px' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: roomData.isLive ? '#00ff00' : '#ffaa00', boxShadow: roomData.isLive ? '0 0 10px #00ff00' : '0 0 10px #ffaa00' }}></div>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                            {roomData.isLive ? 'API: LIVE' : 'DATA: BACKUP'}
+                        </span>
+                    </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>ROOM ID</div>
-                    <div style={{ fontWeight: '800' }}>{roomId}</div>
+                    <div style={{ fontWeight: '800', fontSize: '1.2rem' }}>{roomId}</div>
                 </div>
             </div>
 
