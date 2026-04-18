@@ -1,21 +1,21 @@
-import axios from 'axios';
-
 export default async function handler(req, res) {
-  const config = {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
-  };
+  const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' };
   
-  console.log("Vercel Bridge: Fetching demons from Pointercrate...");
+  console.log("Vercel Bridge: Fetching demons from Pointercrate (Native Fetch)...");
   
   try {
-    const p1 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100', config);
-    const p2 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=100', config);
-    const p3 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=200', config);
+    const urls = [
+      'https://pointercrate.com/api/v2/demons/listed/?limit=100',
+      'https://pointercrate.com/api/v2/demons/listed/?limit=100&after=100',
+      'https://pointercrate.com/api/v2/demons/listed/?limit=100&after=200'
+    ];
+
+    const responses = await Promise.all(urls.map(url => fetch(url, { headers })));
+    const data = await Promise.all(responses.map(r => r.json()));
     
-    const results = await Promise.all([p1, p2, p3]);
-    const allDemons = [...results[0].data, ...results[1].data, ...results[2].data];
+    const allDemons = data.flat();
     
-    // Add CORS headers so the Railway server can talk to this
+    // Add CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
     
