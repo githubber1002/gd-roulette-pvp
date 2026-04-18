@@ -23,10 +23,23 @@ let rooms = {};
 
 // Helper to fetch demons
 async function getDemons() {
+  const bridgeUrl = 'https://gd-roulette-pvp.vercel.app/api/getDemons';
   const config = {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
   };
   
+  // TRY THE VERCEL BRIDGE FIRST
+  try {
+    console.log("Checking Vercel Bridge for live data...");
+    const bridgeResponse = await axios.get(bridgeUrl, { timeout: 8000 });
+    if (bridgeResponse.data && Array.isArray(bridgeResponse.data)) {
+        console.log("SUCCESS: Bridge is LIVE. Fetched demons from Vercel.");
+        return { demons: bridgeResponse.data, isLive: true };
+    }
+  } catch (err) {
+    console.log("Vercel Bridge not ready or blocked. Falling back to direct fetch...");
+  }
+
   try {
     // Sequential fetch to avoid rate limits/blocks
     console.log("Fetching demons Page 1...");
