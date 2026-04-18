@@ -24,15 +24,26 @@ let rooms = {};
 // Helper to fetch demons
 async function getDemons() {
   try {
-    const response = await axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100');
-    return response.data;
+    // Fetch top 300 demons (1-300) to include Legacy list
+    const p1 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100');
+    const p2 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=100');
+    const p3 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=200');
+    
+    const results = await Promise.all([p1, p2, p3]);
+    const allDemons = [...results[0].data, ...results[1].data, ...results[2].data];
+    
+    console.log(`Successfully fetched ${allDemons.length} demons.`);
+    return allDemons;
   } catch (error) {
     console.error("Error fetching demons:", error);
-    // Fallback list in case API is down
+    // Bigger fallback list
     return [
       { name: "Tidal Wave", publisher: { name: "OniLink" }, position: 1 },
       { name: "Acheron", publisher: { name: "Ryamu" }, position: 2 },
-      { name: "Silent Clubstep", publisher: { name: "Paqoe" }, position: 3 }
+      { name: "Silent Clubstep", publisher: { name: "Paqoe" }, position: 3 },
+      { name: "Kenos", publisher: { name: "Chief" }, position: 40 },
+      { name: "Sonic Wave", publisher: { name: "Sunix" }, position: 100 },
+      { name: "Bloodbath", publisher: { name: "Riot" }, position: 250 }
     ];
   }
 }
