@@ -23,28 +23,34 @@ let rooms = {};
 
 // Helper to fetch demons
 async function getDemons() {
+  const config = {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+  };
+  
   try {
     // Fetch top 300 demons (1-300) to include Legacy list
-    const p1 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100');
-    const p2 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=100');
-    const p3 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=200');
+    const p1 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100', config);
+    const p2 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=100', config);
+    const p3 = axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=200', config);
     
     const results = await Promise.all([p1, p2, p3]);
     const allDemons = [...results[0].data, ...results[1].data, ...results[2].data];
     
-    console.log(`Successfully fetched ${allDemons.length} demons.`);
+    console.log(`Successfully fetched ${allDemons.length} demons from API.`);
     return allDemons;
   } catch (error) {
-    console.error("Error fetching demons:", error);
-    // Bigger fallback list
+    console.error("CRITICAL: Pointercrate API blocked or failed:", error.message);
+    // Even bigger and better fallback list to ensure the game is still fun
     return [
-      { name: "Tidal Wave", publisher: { name: "OniLink" }, position: 1 },
-      { name: "Acheron", publisher: { name: "Ryamu" }, position: 2 },
-      { name: "Silent Clubstep", publisher: { name: "Paqoe" }, position: 3 },
-      { name: "Kenos", publisher: { name: "Chief" }, position: 40 },
-      { name: "Sonic Wave", publisher: { name: "Sunix" }, position: 100 },
-      { name: "Bloodbath", publisher: { name: "Riot" }, position: 250 }
-    ];
+      { name: "Bloodlust", publisher: { name: "Knobbelboy" }, position: 50 },
+      { name: "Tartarus", publisher: { name: "Riot" }, position: 20 },
+      { name: "Zodiac", publisher: { name: "Bianox" }, position: 30 },
+      { name: "Yatagarasu", publisher: { name: "Trusta" }, position: 150 },
+      { name: "Cataclysm", publisher: { name: "GGBoy" }, position: 400 },
+      { name: "BloodBath", publisher: { name: "Riot" }, position: 250 },
+      { name: "Phobos", publisher: { name: "TIGS" }, position: 350 },
+      { name: "Aftercatabath", publisher: { name: "BoyOfTheBunny" }, position: 360 }
+    ].sort(() => Math.random() - 0.5);
   }
 }
 
