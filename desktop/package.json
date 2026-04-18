@@ -1,0 +1,41 @@
+{
+  "name": "desktop",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.gdroulette.pvp",
+    "productName": "GD Roulette PvP",
+    "win": {
+      "target": "portable",
+      "icon": "renderer/favicon.ico"
+    },
+    "files": [
+      "index.js",
+      "renderer/**/*",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.15.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "localtunnel": "^2.0.2",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "electron": "^41.2.1",
+    "electron-builder": "^26.8.1"
+  }
+}

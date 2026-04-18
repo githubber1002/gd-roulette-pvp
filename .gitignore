@@ -1,0 +1,8 @@
+node_modules/
+dist/
+win-unpacked/
+.env
+.DS_Store
+*.log
+renderer/
+asar/
