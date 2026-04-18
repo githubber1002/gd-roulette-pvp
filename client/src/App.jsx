@@ -13,6 +13,7 @@ function App() {
   const [roomData, setRoomData] = useState(null);
   const [error, setError] = useState('');
   const [isConnected, setIsConnected] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   
   const socketRef = useRef(null);
 
@@ -39,7 +40,9 @@ function App() {
     });
 
     socket.on('roomUpdate', (data) => {
-      console.log("Room Update received:", data);
+      if (roomData && data.currentIndex !== roomData.currentIndex) {
+        setCooldown(5);
+      }
       setRoomData(data);
       if (data.isStarted) {
         setView('game');
@@ -60,7 +63,14 @@ function App() {
     return () => {
       socket.disconnect();
     };
-  }, [serverUrl]); // ONLY reconnect if the URL changes, not the view!
+  }, [serverUrl]);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const handleCreateRoom = () => {
     if (!username) return setError('Please enter a username');
@@ -166,7 +176,8 @@ function App() {
                     {roomData.players.map(p => (
                         <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', marginBottom: '8px' }}>
                             <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: p.isHost ? 'var(--accent)' : 'var(--text-dim)' }}></div>
-                            <span>{p.username}</span>
+                             <div style={{ flex: 1 }}>{p.username}</div>
+                             <div style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{p.score} PTS</div>
                         </div>
                     ))}
                 </div>
@@ -201,15 +212,31 @@ function App() {
                         <div className="percent-label">REQUIRED TO ADVANCE</div>
                         <h1 style={{ fontSize: '2.5rem', wordBreak: 'break-word' }}>{roomData.demonList[roomData.currentIndex]?.name}</h1>
                         <p style={{ color: 'var(--text-dim)' }}>by {roomData.demonList[roomData.currentIndex]?.publisher?.name}</p>
-                        <button className="btn btn-success" onClick={markBeaten} style={{ marginTop: '2rem' }}> I GOT {roomData.currentPercent}%! </button>
+                        <button 
+                            className="btn btn-success" 
+                            onClick={markBeaten} 
+                            style={{ marginTop: '2rem', width: '100%', opacity: cooldown > 0 ? 0.5 : 1 }} 
+                            disabled={cooldown > 0}
+                        > 
+                            {cooldown > 0 ? `COOLDOWN (${cooldown}s)` : `I GOT ${roomData.currentPercent}%!`}
+                        </button>
                     </motion.div>
                 </main>
-                <aside>
+                 <aside>
+                    <div className="glass" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem', color: 'var(--text-dim)', fontSize: '0.8rem', textTransform: 'uppercase' }}>LEADERBOARD</h3>
+                        {roomData.players.sort((a, b) => b.score - a.score).map(p => (
+                            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                <span>{p.username}</span>
+                                <span style={{ color: 'var(--accent)' }}>{p.score}</span>
+                            </div>
+                        ))}
+                    </div>
                     <div className="glass" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ marginBottom: '1rem', color: 'var(--text-dim)' }}>HISTORY</h3>
+                        <h3 style={{ marginBottom: '1rem', color: 'var(--text-dim)', fontSize: '0.8rem', textTransform: 'uppercase' }}>HISTORY</h3>
                         {roomData.history.map((h, i) => (
-                            <div key={i} style={{ padding: '10px 0', borderBottom: '1px solid #333' }}>
-                                <b>{h.name}</b> - {h.percentNeeded}%
+                            <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.1)', fontSize: '0.9rem' }}>
+                                <b>{h.name}</b> by <span style={{color: 'var(--text-dim)'}}>{h.beatenBy}</span>
                             </div>
                         ))}
                     </div>

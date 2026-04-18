@@ -57,7 +57,7 @@ io.on('connection', (socket) => {
       };
     }
     
-    const player = { id: socket.id, username, isHost };
+    const player = { id: socket.id, username, isHost, score: 0 };
     rooms[roomId].players.push(player);
     
     io.to(roomId).emit('roomUpdate', rooms[roomId]);
@@ -82,6 +82,12 @@ io.on('connection', (socket) => {
       room.currentIndex += 1;
       room.currentPercent += 1;
       
+      // Award points to the player
+      const player = room.players.find(p => p.id === socket.id);
+      if (player) {
+          player.score += room.currentPercent;
+      }
+
       if (room.currentPercent > 100) {
           io.to(roomId).emit('gameOver', { winner: socket.username });
       } else {
