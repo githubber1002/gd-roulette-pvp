@@ -108,6 +108,10 @@ function App() {
     if (socketRef.current) socketRef.current.emit('requestRestart', roomId);
   };
 
+  const handleRequestSkip = () => {
+    if (socketRef.current) socketRef.current.emit('requestSkip', roomId);
+  };
+
   return (
     <div className="app-container">
       <AnimatePresence mode="wait">
@@ -239,6 +243,25 @@ function App() {
                              {roomData.restartVotes.length > 0 && (
                                  <div style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>
                                      {roomData.restartVotes.length} / {roomData.players.length === 2 ? 2 : Math.ceil(roomData.players.length / 2)} VOTES
+                                 </div>
+                             )}
+                        </div>
+
+                        <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                             <button 
+                                className="btn btn-secondary" 
+                                style={{ flex: 1, padding: '10px', fontSize: '0.8rem', opacity: roomData.skipsRemaining > 0 ? 1 : 0.4, background: roomData.skipVotes.includes(socketRef.current?.id) ? 'rgba(0, 242, 255, 0.1)' : '' }} 
+                                onClick={handleRequestSkip}
+                                disabled={roomData.skipsRemaining === 0 || roomData.skipVotes.includes(socketRef.current?.id)}
+                             >
+                                {roomData.skipsRemaining > 0 
+                                    ? (roomData.skipVotes.includes(socketRef.current?.id) ? 'VOTED TO SKIP' : `VOTE SKIP (${roomData.skipsRemaining} LEFT)`)
+                                    : 'SKIP USED'
+                                }
+                             </button>
+                             {roomData.skipVotes.length > 0 && (
+                                 <div style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>
+                                     {roomData.skipVotes.length} / {roomData.players.length} VOTES
                                  </div>
                              )}
                         </div>

@@ -109,7 +109,9 @@ io.on('connection', (socket) => {
         currentPercent: 1,
         isStarted: false,
         history: [],
-        restartVotes: []
+        restartVotes: [],
+        skipsRemaining: 1,
+        skipVotes: []
       };
     }
     
@@ -156,6 +158,7 @@ io.on('connection', (socket) => {
           io.to(roomId).emit('gameOver', { winner: socket.username });
       } else {
           io.to(roomId).emit('levelBeatenAnnounce', { username: socket.username, levelName: beatenLevel.name });
+          room.skipVotes = []; // Clear skip votes for the new level
           io.to(roomId).emit('roomUpdate', room);
       }
     }
@@ -179,6 +182,8 @@ io.on('connection', (socket) => {
         room.history = [];
         room.isStarted = false;
         room.restartVotes = [];
+        room.skipsRemaining = 1;
+        room.skipVotes = [];
         // Reset scores
         room.players.forEach(p => p.score = 0);
         // Optional: Re-shuffle for variety
@@ -186,6 +191,28 @@ io.on('connection', (socket) => {
         
         io.to(roomId).emit('roomUpdate', room);
         io.to(roomId).emit('gameRestarted', { by: socket.username });
+      } else {
+        io.to(roomId).emit('roomUpdate', room);
+      }
+    }
+  });
+
+  socket.on('requestSkip', (roomId) => {
+    const room = rooms[roomId];
+    if (room && room.skipsRemaining > 0) {
+      if (!room.skipVotes.includes(socket.id)) {
+        room.skipVotes.push(socket.id);
+      }
+
+      const totalPlayers = room.players.length;
+      if (room.skipVotes.length >= totalPlayers) {
+        // Unanimous skip!
+        room.currentIndex += 1;
+        room.skipsRemaining = 0;
+        room.skipVotes = [];
+        
+        io.to(roomId).emit('roomUpdate', room);
+        io.to(roomId).emit('levelSkipped', { by: 'The Whole Party' });
       } else {
         io.to(roomId).emit('roomUpdate', room);
       }
