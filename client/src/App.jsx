@@ -7,7 +7,7 @@ import confetti from 'canvas-confetti';
 function App() {
   const [username, setUsername] = useState(localStorage.getItem('gdUsername') || '');
   const [view, setView] = useState('home'); // home, lobby, game
-  const [serverUrl, setServerUrl] = useState(import.meta.env.VITE_SERVER_URL || 'http://localhost:3001');
+  const [serverUrl, setServerUrl] = useState(import.meta.env.VITE_SERVER_URL || 'https://gd-roulette-pvp-production.up.railway.app');
   const [publicUrl, setPublicUrl] = useState('');
   const [roomId, setRoomId] = useState('');
   const [roomData, setRoomData] = useState(null);
@@ -119,12 +119,12 @@ function App() {
           <motion.div key="home" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="lobby-card glass">
             <h1>Demon Roulette <span style={{color: 'var(--text-dim)', fontSize: '1.5rem'}}>PVP</span></h1>
             
-            <div style={{ marginBottom: '2rem', width: '100%', maxWidth: '400px' }}>
+            <div style={{ marginBottom: '2rem', width: '100%', maxWidth: '400px', display: 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-dim)', fontSize: '0.8rem', marginBottom: '8px', textTransform: 'uppercase' }}>
                     <Globe size={14} /> Server Address
                 </div>
                 <input 
-                    placeholder="http://localhost:3001" 
+                    placeholder="https://gd-roulette-pvp-production.up.railway.app" 
                     value={serverUrl} 
                     onChange={(e) => setServerUrl(e.target.value)} 
                     style={{ width: '100%', textAlign: 'center', border: '1px dashed var(--accent)' }}
