@@ -131,7 +131,8 @@ io.on('connection', (socket) => {
       }
 
       const totalPlayers = room.players.length;
-      const votesNeeded = Math.ceil(totalPlayers / 2);
+      // If 2 players, both must vote. Otherwise, majority.
+      const votesNeeded = totalPlayers === 2 ? 2 : Math.ceil(totalPlayers / 2);
 
       if (room.restartVotes.length >= votesNeeded) {
         // Reset the run
@@ -140,6 +141,8 @@ io.on('connection', (socket) => {
         room.history = [];
         room.isStarted = false;
         room.restartVotes = [];
+        // Reset scores
+        room.players.forEach(p => p.score = 0);
         // Optional: Re-shuffle for variety
         room.demonList = room.demonList.sort(() => Math.random() - 0.5);
         
