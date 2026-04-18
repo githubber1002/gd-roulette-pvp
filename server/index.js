@@ -71,8 +71,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('levelBeaten', (roomId) => {
-    if (rooms[roomId]) {
-      const room = rooms[roomId];
+    const room = rooms[roomId];
+    if (room) {
+      const now = Date.now();
+      // 4.5 second buffer to prevent race conditions/double-clicking
+      if (room.lastBeaten && now - room.lastBeaten < 4500) {
+          console.log(`Rate limit hit for room ${roomId}`);
+          return;
+      }
+      room.lastBeaten = now;
+
       const beatenLevel = room.demonList[room.currentIndex];
       
       if (!beatenLevel) return;

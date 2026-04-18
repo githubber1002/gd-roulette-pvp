@@ -98,6 +98,8 @@ function App() {
   };
 
   const markBeaten = () => {
+    if (cooldown > 0) return;
+    setCooldown(5);
     if (socketRef.current) socketRef.current.emit('levelBeaten', roomId);
     confetti({ particleCount: 100, spread: 60, origin: { y: 0.8 }, colors: ['#00f2ff', '#bc13fe'] });
   };
