@@ -70,7 +70,8 @@ io.on('connection', (socket) => {
         currentIndex: 0,
         currentPercent: 1,
         isStarted: false,
-        history: []
+        history: [],
+        restartVotes: []
       };
     }
     
@@ -118,6 +119,34 @@ io.on('connection', (socket) => {
       } else {
           io.to(roomId).emit('levelBeatenAnnounce', { username: socket.username, levelName: beatenLevel.name });
           io.to(roomId).emit('roomUpdate', room);
+      }
+    }
+  });
+
+  socket.on('requestRestart', (roomId) => {
+    const room = rooms[roomId];
+    if (room) {
+      if (!room.restartVotes.includes(socket.id)) {
+        room.restartVotes.push(socket.id);
+      }
+
+      const totalPlayers = room.players.length;
+      const votesNeeded = Math.ceil(totalPlayers / 2);
+
+      if (room.restartVotes.length >= votesNeeded) {
+        // Reset the run
+        room.currentIndex = 0;
+        room.currentPercent = 1;
+        room.history = [];
+        room.isStarted = false;
+        room.restartVotes = [];
+        // Optional: Re-shuffle for variety
+        room.demonList = room.demonList.sort(() => Math.random() - 0.5);
+        
+        io.to(roomId).emit('roomUpdate', room);
+        io.to(roomId).emit('gameRestarted', { by: socket.username });
+      } else {
+        io.to(roomId).emit('roomUpdate', room);
       }
     }
   });

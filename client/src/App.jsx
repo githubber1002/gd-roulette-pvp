@@ -104,6 +104,10 @@ function App() {
     confetti({ particleCount: 100, spread: 60, origin: { y: 0.8 }, colors: ['#00f2ff', '#bc13fe'] });
   };
 
+  const handleRequestRestart = () => {
+    if (socketRef.current) socketRef.current.emit('requestRestart', roomId);
+  };
+
   return (
     <div className="app-container">
       <AnimatePresence mode="wait">
@@ -222,6 +226,22 @@ function App() {
                         > 
                             {cooldown > 0 ? `COOLDOWN (${cooldown}s)` : `I GOT ${roomData.currentPercent}%!`}
                         </button>
+
+                        <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                             <button 
+                                className="btn btn-secondary" 
+                                style={{ flex: 1, padding: '10px', fontSize: '0.8rem', background: roomData.restartVotes.includes(socketRef.current?.id) ? 'rgba(255,255,255,0.1)' : '' }} 
+                                onClick={handleRequestRestart}
+                                disabled={roomData.restartVotes.includes(socketRef.current?.id)}
+                             >
+                                {roomData.restartVotes.includes(socketRef.current?.id) ? 'VOTED TO RESTART' : 'VOTE RESTART'}
+                             </button>
+                             {roomData.restartVotes.length > 0 && (
+                                 <div style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>
+                                     {roomData.restartVotes.length} / {Math.ceil(roomData.players.length / 2)} VOTES
+                                 </div>
+                             )}
+                        </div>
                     </motion.div>
                 </main>
                  <aside>
