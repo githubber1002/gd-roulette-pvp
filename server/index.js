@@ -23,7 +23,7 @@ let rooms = {};
 
 // Helper to fetch demons
 async function getDemons() {
-  const bridgeUrl = 'https://gd-roulette-pvp.vercel.app/api/getDemons';
+  const bridgeUrl = 'https://gd-roulette-pvp.vercel.app/api/get-demons';
   const config = {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
   };
