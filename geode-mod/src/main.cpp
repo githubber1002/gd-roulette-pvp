@@ -52,7 +52,7 @@ void reportToServer(const std::string& levelName, int levelId, int percent, bool
     std::string tokenStr = token;
     std::string levelStr = levelName;
 
-    std::thread([urlStr, tokenStr, levelStr, percent, completed]() {
+    std::thread([urlStr, tokenStr, levelStr, levelId, percent, completed]() {
         auto req = web::WebRequest();
         req.header("Content-Type", "application/json");
 

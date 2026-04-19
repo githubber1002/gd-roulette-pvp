@@ -15,13 +15,46 @@ function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [isFetchingDemons, setIsFetchingDemons] = useState(false);
-  
   const socketRef = useRef(null);
-  const victorySound = useRef(new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3'));
+  const audioContextRef = useRef(null);
+  const audioBufferRef = useRef(null);
 
+  // Pre-load and decode the audio for instant, loud playback
   useEffect(() => {
-    victorySound.current.load();
+    const initAudio = async () => {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioContextRef.current = new AudioContext();
+            
+            const response = await fetch('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+            const arrayBuffer = await response.arrayBuffer();
+            audioBufferRef.current = await audioContextRef.current.decodeAudioData(arrayBuffer);
+        } catch (e) {
+            console.error("Audio pre-load failed:", e);
+        }
+    };
+    initAudio();
   }, []);
+
+  const playVictorySound = () => {
+    if (!audioContextRef.current || !audioBufferRef.current) return;
+
+    // Create a new source for every play (allows overlapping)
+    const source = audioContextRef.current.createBufferSource();
+    source.buffer = audioBufferRef.current;
+
+    // BASS BOOST / AMPLIFY: Create a gain node and set it to a high value
+    const gainNode = audioContextRef.current.createGain();
+    gainNode.gain.value = 4.0; // 400% volume / basic "Bass Boost"
+
+    source.connect(gainNode);
+    gainNode.connect(audioContextRef.current.destination);
+
+    if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+    }
+    source.start(0);
+  };
 
   useEffect(() => {
     // Listen for public tunnel URL from Electron
@@ -67,11 +100,7 @@ function App() {
     });
 
     socket.on('levelBeatenAnnounce', ({ username, levelName }) => {
-        if (victorySound.current) {
-            victorySound.current.currentTime = 0;
-            victorySound.current.volume = 1.0;
-            victorySound.current.play().catch(e => console.log("Audio play blocked:", e));
-        }
+        playVictorySound();
     });
 
     return () => {
