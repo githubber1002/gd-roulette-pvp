@@ -6,3 +6,10 @@ win-unpacked/
 *.log
 renderer/
 asar/
+
+build/
+geode-mod/build/
+*.geode
+*.pdb
+*.exp
+*.lib

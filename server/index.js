@@ -14,8 +14,11 @@ app.get('/', (req, res) => {
 
 // MOD API ENDPOINTS
 app.post('/api/mod/connect', (req, res) => {
-  const { token } = req.body;
+  const token = req.body.token?.trim();
+  console.log(`Mod attempting to connect with token: "${token}"`);
+  
   if (!token || !modTokens[token]) {
+    console.log(`Failed connection: Token "${token}" not found in modTokens. Available tokens:`, Object.keys(modTokens));
     return res.status(401).json({ error: 'Invalid or missing token' });
   }
   
@@ -102,122 +105,84 @@ let modTokens = {}; // Maps token -> { roomId, socketId, username }
 // Helper to fetch demons
 async function getDemons() {
   const bridgeUrl = 'https://gd-roulette-pvp.vercel.app/api/get-demons';
-  const config = {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json'
   };
-  
-  // TRY THE VERCEL BRIDGE FIRST
+
+  // 1. TRY THE VERCEL BRIDGE
   try {
-    console.log("Checking Vercel Bridge for live data...");
     const bridgeResponse = await axios.get(bridgeUrl, { timeout: 8000 });
     if (bridgeResponse.data && Array.isArray(bridgeResponse.data)) {
-        console.log("SUCCESS: Bridge is LIVE. Fetched demons from Vercel.");
-        return { demons: bridgeResponse.data, isLive: true };
+      return { demons: bridgeResponse.data, isLive: true };
     }
   } catch (err) {
-    console.log("Vercel Bridge not ready or blocked. Falling back to direct fetch...");
+    console.log("Vercel Bridge down, trying direct...");
   }
 
-  try {
-    // Sequential fetch to avoid rate limits/blocks
-    console.log("Fetching demons Page 1...");
-    const r1 = await axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100', config);
-    await new Promise(r => setTimeout(r, 500)); // 0.5s pause
-    
-    console.log("Fetching demons Page 2...");
-    const r2 = await axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=100', config);
-    await new Promise(r => setTimeout(r, 500)); // 0.5s pause
-    
-    console.log("Fetching demons Page 3...");
-    const r3 = await axios.get('https://pointercrate.com/api/v2/demons/listed/?limit=100&after=200', config);
-    
-    const allDemons = [...r1.data, ...r2.data, ...r3.data];
-    console.log(`Successfully fetched ${allDemons.length} demons from API.`);
-    return { demons: allDemons, isLive: true };
-  } catch (error) {
-    console.error("CRITICAL: Pointercrate API blocked or failed:", error.message);
-    // 100+ Unique Extreme/Legacy Demons for absolute variety
-    const massiveFallback = [
-      { name: "Bloodlust", publisher: { name: "Knobbelboy" } },
-      { name: "Tartarus", publisher: { name: "Riot" } },
-      { name: "Zodiac", publisher: { name: "Bianox" } },
-      { name: "Yatagarasu", publisher: { name: "Trusta" } },
-      { name: "Cataclysm", publisher: { name: "GGBoy" } },
-      { name: "BloodBath", publisher: { name: "Riot" } },
-      { name: "Phobos", publisher: { name: "TIGS" } },
-      { name: "Aftercatabath", publisher: { name: "BoyOfTheBunny" } },
-      { name: "Sonic Wave", publisher: { name: "Sunix" } },
-      { name: "Kenos", publisher: { name: "Chief" } },
-      { name: "Digital Descent", publisher: { name: "Viprin" } },
-      { name: "Artificial Ascent", publisher: { name: "Viprin" } },
-      { name: "Erebus", publisher: { name: "BoldStep" } },
-      { name: "Thinking Space", publisher: { name: "Hideki" } },
-      { name: "Promethean", publisher: { name: "EndLevel" } },
-      { name: "The Golden", publisher: { name: "Bo" } },
-      { name: "Trueffet", publisher: { name: "SyQual" } },
-      { name: "Slaughterhouse", publisher: { name: "IcedCave" } },
-      { name: "Firework", publisher: { name: "Trick" } },
-      { name: "Tidal Wave", publisher: { name: "OniLink" } },
-      { name: "Acheron", publisher: { name: "Ryamu" } },
-      { name: "Silent Clubstep", publisher: { name: "Paqoe" } },
-      { name: "A Sakupen Circles", publisher: { name: "Nick XD" } },
-      { name: "Abyss of Darkness", publisher: { name: "Exen" } },
-      { name: "Keres", publisher: { name: "ItsHybrid" } },
-      { name: "Oblivion", publisher: { name: "Dice88" } },
-      { name: "Azure Flare", publisher: { name: "Danzole" } },
-      { name: "Misanthrope", publisher: { name: "HaeSool" } },
-      { name: "Hard Machine", publisher: { name: "Kompetenz" } },
-      { name: "Limbo", publisher: { name: "MindCap" } },
-      { name: "Killbot", publisher: { name: "Lithifusion" } },
-      { name: "Requiem", publisher: { name: "Lithifusion" } },
-      { name: "Renevant", publisher: { name: "Nikrodox" } },
-      { name: "Gamma", publisher: { name: "MindCap" } },
-      { name: "Sigma", publisher: { name: "MindCap" } },
-      { name: "Omega", publisher: { name: "MindCap" } },
-      { name: "Hyper Paracosm", publisher: { name: "Viruz" } },
-      { name: "Fragile", publisher: { name: "Luz" } },
-      { name: "Visle", publisher: { name: "Xhynte" } },
-      { name: "Cold Sweat", publisher: { name: "Para" } },
-      { name: "Arcturus", publisher: { name: "Maxfs" } },
-      { name: "Lucid Nightmares", publisher: { name: "Cactus" } },
-      { name: "Visible Ray", publisher: { name: "Krazyman50" } },
-      { name: "Ouroboros", publisher: { name: "Viprin" } },
-      { name: "Cognition", publisher: { name: "EndLevel" } },
-      { name: "Wasureta", publisher: { name: "Fatality" } },
-      { name: "Kowareta", publisher: { name: "Luz" } },
-      { name: "Crimson Planet", publisher: { name: "TrueChaos" } },
-      { name: "Arctic Lights", publisher: { name: "EndLevel" } },
-      { name: "Mayhem", publisher: { name: "Sillow" } },
-      { name: "Infernal Abyss", publisher: { name: "Yuka" } },
-      { name: "Hatred", publisher: { name: "SrGuillester" } },
-      { name: "Black Blizzard", publisher: { name: "Krazyman50" } },
-      { name: "Heartbeat", publisher: { name: "Krazyman50" } },
-      { name: "SubSonic", publisher: { name: "Viprin" } },
-      { name: "Bausha Vortex", publisher: { name: "Lextar" } },
-      { name: "Quantum Processing", publisher: { name: "DjSpoon" } },
-      { name: "The Hell Castle", publisher: { name: "Sohn0924" } },
-      { name: "Cosmic Terror", publisher: { name: "Noctafly" } },
-      { name: "Blade of Justice", publisher: { name: "Manix64" } },
-      { name: "Edge of Destiny", publisher: { name: "CDMusic" } },
-      { name: "Digital Descent", publisher: { name: "Viprin" } },
-      { name: "Acheron", publisher: { name: "Ryamu" } },
-      { name: "Eternal Victory", publisher: { name: "TrueChaos" } },
-      { name: "Sinister Silence", publisher: { name: "Viprin" } },
-      { name: "Deimos", publisher: { name: "Hybrid" } },
-      { name: "Phobos", publisher: { name: "TIGS" } },
-      { name: "Conical Depression", publisher: { name: "Krazyman50" } },
-      { name: "Delta Flare", publisher: { name: "Krazyman50" } },
-      { name: "Glowy", publisher: { name: "Rob Buck" } },
-      { name: "Idols", publisher: { name: "Zylenox" } },
-      { name: "Molten Core", publisher: { name: "Manix64" } },
-      { name: "Singularity", publisher: { name: "Eusebio" } },
-      { name: "Nhelv", publisher: { name: "SrGuillester" } },
-      { name: "Ufwm", publisher: { name: "Ufwm" } },
-      { name: "Zaphkiel", publisher: { name: "Noctafly" } },
-      { name: "Primal Fusion", publisher: { name: "Viprin" } }
-    ];
-    return { demons: massiveFallback, isLive: false };
+  // 2. TRY DIRECT FETCH WITH PROXY BYPASS AND PARTIAL SUCCESS SUPPORT
+  let allDemons = [];
+  const pages = [
+    'https://pointercrate.com/api/v2/demons/listed/?limit=100',
+    'https://pointercrate.com/api/v2/demons/listed/?limit=100&after=100',
+    'https://pointercrate.com/api/v2/demons/listed/?limit=100&after=200'
+  ];
+
+  for (let i = 0; i < pages.length; i++) {
+    try {
+      console.log(`Fetching Pointercrate Page ${i+1} via proxy...`);
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(pages[i])}`;
+      const res = await axios.get(proxyUrl, { headers, timeout: 8000 });
+      if (res.data && Array.isArray(res.data)) {
+        allDemons = [...allDemons, ...res.data];
+      }
+      await new Promise(r => setTimeout(r, 800)); // Be gentle
+    } catch (err) {
+      console.error(`Page ${i+1} proxy failed: ${err.message}`);
+      break; // Exit loop if we hit a block
+    }
   }
+
+  if (allDemons.length > 0) {
+    console.log(`SUCCESS: Fetched ${allDemons.length} live demons.`);
+    return { demons: allDemons, isLive: true };
+  }
+
+  // 3. FALLBACK (Hardcoded)
+  console.log("CRITICAL: All live sources failed. Using Backup Data.");
+  const massiveFallback = [
+    { name: "Bloodlust", publisher: { name: "Knobbelboy" } },
+    { name: "Tartarus", publisher: { name: "Riot" } },
+    { name: "Zodiac", publisher: { name: "Bianox" } },
+    { name: "Yatagarasu", publisher: { name: "Trusta" } },
+    { name: "Cataclysm", publisher: { name: "GGBoy" } },
+    { name: "Acheron", publisher: { name: "Riot" } },
+    { name: "Slaughterhouse", publisher: { name: "IcedCave" } },
+    { name: "Firework", publisher: { name: "CherryTeam" } },
+    { name: "Mainframe", publisher: { name: "Zebus" } },
+    { name: "Sonic Wave", publisher: { name: "Sunix" } },
+    { name: "Limbo", publisher: { name: "MindCap" } },
+    { name: "Kenos", publisher: { name: "Bianox" } },
+    { name: "The Golden", publisher: { name: "Bo" } },
+    { name: "Sakupen Circles", publisher: { name: "Nick136" } },
+    { name: "Abyss of Darkness", publisher: { name: "Exen" } },
+    { name: "Trueffet", publisher: { name: "Synergi" } },
+    { name: "Hard Machine", publisher: { name: "Komek" } },
+    { name: "VSC", publisher: { name: "Cursed" } },
+    { name: "Silent Clubstep", publisher: { name: "Paqoe" } },
+    { name: "Azure Flare", publisher: { name: "Slayer" } },
+    { name: "Eternal Night", publisher: { name: "CherryTeam" } },
+    { name: "Oblivion", publisher: { name: "Dizzy" } },
+    { name: "Sinister Silence", publisher: { name: "Eternity" } },
+    { name: "Kyouki", publisher: { name: "Demishow" } },
+    { name: "Poocubed", publisher: { name: "PooBear" } },
+    { name: "Fragile", publisher: { name: "Nova" } },
+    { name: "Cognition", publisher: { name: "EndLevel" } },
+    { name: "Renevant", publisher: { name: "Nikro" } },
+    { name: "Thinking Space", publisher: { name: "Hideki" } },
+    { name: "Promethean", publisher: { name: "EndLevel" } }
+  ];
+  return { demons: massiveFallback, isLive: false };
 }
 
 function shuffle(array) {
@@ -256,6 +221,15 @@ io.on('connection', (socket) => {
     }
     
     const player = { id: socket.id, username, isHost, score: 0, modVerified: false };
+    
+    // Generate token if room already requires mod
+    if (rooms[roomId].requireMod) {
+      const token = 'GD-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      player.modToken = token;
+      modTokens[token] = { roomId, socketId: socket.id, username: player.username };
+      console.log(`Generated late-join token ${token} for ${username} in room ${roomId}`);
+    }
+
     rooms[roomId].players.push(player);
     
     io.to(roomId).emit('roomUpdate', rooms[roomId]);

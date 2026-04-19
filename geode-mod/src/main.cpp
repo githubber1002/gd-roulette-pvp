@@ -12,6 +12,17 @@ static int g_lastReportedPercent = 0;
 // Helper to get the server URL from settings
 std::string getServerUrl() {
     auto url = Mod::get()->getSettingValue<std::string>("server-url");
+    
+    // Basic cleaning: remove spaces and tabs
+    url.erase(std::remove_if(url.begin(), url.end(), [](unsigned char c) {
+        return std::isspace(c);
+    }), url.end());
+
+    // Ensure it starts with http
+    if (!url.empty() && url.find("http") != 0) {
+        url = "https://" + url;
+    }
+
     // Remove trailing slash if present
     if (!url.empty() && url.back() == '/') {
         url.pop_back();
@@ -24,6 +35,8 @@ std::string getToken() {
     return Mod::get()->getSettingValue<std::string>("token");
 }
 
+#include <thread>
+
 // Send a completion/death report to the server
 void reportToServer(const std::string& levelName, int percent, bool completed) {
     auto token = getToken();
@@ -33,31 +46,35 @@ void reportToServer(const std::string& levelName, int percent, bool completed) {
     }
 
     auto serverUrl = getServerUrl();
-    auto url = serverUrl + "/api/mod/report";
+    auto urlStr = serverUrl + "/api/mod/report";
+    log::info("Reporting to: {}", urlStr);
+    std::string tokenStr = token;
+    std::string levelStr = levelName;
 
-    matjson::Value body;
-    body["token"] = token;
-    body["levelName"] = levelName;
-    body["percent"] = percent;
-    body["completed"] = completed;
+    std::thread([urlStr, tokenStr, levelStr, percent, completed]() {
+        auto req = web::WebRequest();
+        req.header("Content-Type", "application/json");
 
-    auto req = web::WebRequest();
-    req.bodyJSON(body);
-    req.header("Content-Type", "application/json");
+        matjson::Value body;
+        body["token"] = tokenStr;
+        body["levelName"] = levelStr;
+        body["percent"] = percent;
+        body["completed"] = completed;
+        req.bodyJSON(body);
 
-    // Fire and forget - we use a static listener to keep it alive
-    static std::optional<web::WebTask> s_task;
-    s_task = req.post(url);
-    s_task->listen(
-        [levelName, percent](web::WebResponse* res) {
-            if (res->ok()) {
-                log::info("Reported: {} at {}%", levelName, percent);
+        auto res = req.postSync(urlStr);
+        bool ok = res.ok();
+        int code = res.code();
+        std::string errStr = res.string().unwrapOr("unknown error");
+
+        geode::Loader::get()->queueInMainThread([ok, code, errStr, levelStr, percent]() {
+            if (ok) {
+                log::info("Reported: {} at {}%", levelStr, percent);
             } else {
-                log::error("Report failed ({}): {}", res->code(), res->string().unwrapOr("unknown error"));
+                log::error("Report failed ({}): {}", code, errStr);
             }
-        },
-        [](auto) {} // progress - ignore
-    );
+        });
+    }).detach();
 }
 
 // Connect to the server when the token is set
@@ -69,31 +86,41 @@ void connectToServer() {
     }
 
     auto serverUrl = getServerUrl();
-    auto url = serverUrl + "/api/mod/connect";
+    auto urlStr = serverUrl + "/api/mod/connect";
+    log::info("Connecting to: {} with token: {}", urlStr, token);
+    std::string tokenStr = token;
 
-    matjson::Value body;
-    body["token"] = token;
+    std::thread([urlStr, tokenStr]() {
+        auto req = web::WebRequest();
+        req.header("Content-Type", "application/json");
 
-    auto req = web::WebRequest();
-    req.bodyJSON(body);
-    req.header("Content-Type", "application/json");
+        matjson::Value body;
+        body["token"] = tokenStr;
+        req.bodyJSON(body);
 
-    static std::optional<web::WebTask> s_connectTask;
-    s_connectTask = req.post(url);
-    s_connectTask->listen(
-        [](web::WebResponse* res) {
-            if (res->ok()) {
+        auto res = req.postSync(urlStr);
+        bool ok = res.ok();
+        int code = res.code();
+        std::string errStr = res.string().unwrapOr("unknown");
+
+        geode::Loader::get()->queueInMainThread([ok, code, errStr, urlStr]() {
+            if (ok) {
                 g_isConnected = true;
                 log::info("Connected to Roulette PvP server!");
-                Notification::create("Roulette Sync", "Connected to server!", NotificationIcon::Success)->show();
+                Notification::create("Connected to Roulette Sync!", NotificationIcon::Success)->show();
             } else {
                 g_isConnected = false;
-                log::error("Connection failed ({}): {}", res->code(), res->string().unwrapOr("unknown"));
-                Notification::create("Roulette Sync", "Failed to connect. Check your token.", NotificationIcon::Error)->show();
+                std::string curlErr = errStr;
+                log::error("Connection failed ({}): {}", code, curlErr);
+                log::error("System hit URL: {}", urlStr);
+                
+                std::string msg = "Connect failed (" + std::to_string(code) + ")";
+                if (!curlErr.empty()) msg += ": " + curlErr;
+                
+                Notification::create(msg, NotificationIcon::Error)->show();
             }
-        },
-        [](auto) {}
-    );
+        });
+    }).detach();
 }
 
 // Hook into PlayLayer to detect game events
@@ -157,6 +184,14 @@ class $modify(RoulettePlayLayer, PlayLayer) {
 // Mod initialization
 $on_mod(Loaded) {
     log::info("Roulette Sync mod loaded!");
+
+    // Listens for setting changes to reconnect immediately
+    listenForSettingChanges<std::string>("token", [](std::string value) {
+        connectToServer();
+    });
+    listenForSettingChanges<std::string>("server-url", [](std::string value) {
+        connectToServer();
+    });
 
     // Try to connect immediately if token is already set
     if (!getToken().empty()) {
