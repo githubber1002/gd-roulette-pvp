@@ -14,6 +14,7 @@ function App() {
   const [error, setError] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [isFetchingDemons, setIsFetchingDemons] = useState(false);
   
   const socketRef = useRef(null);
 
@@ -72,14 +73,36 @@ function App() {
     }
   }, [cooldown]);
 
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     if (!username) return setError('Please enter a username');
     if (!isConnected) return setError('Not connected to server yet...');
     
+    setIsFetchingDemons(true);
+    let customDemons = [];
+    try {
+        console.log("Fetching live list from browser...");
+        const fetchP = (after) => fetch(`https://pointercrate.com/api/v2/demons/listed/?limit=100${after ? `&after=${after}` : ''}`).then(r=>r.json());
+        
+        const [d1, d2, d3] = await Promise.all([
+          fetchP(0).catch(()=>[]), 
+          fetchP(100).catch(()=>[]), 
+          fetchP(200).catch(()=>[])
+        ]);
+        
+        if(Array.isArray(d1)) customDemons.push(...d1);
+        if(Array.isArray(d2)) customDemons.push(...d2);
+        if(Array.isArray(d3)) customDemons.push(...d3);
+        
+        console.log(`Successfully fetched ${customDemons.length} demons from Pointercrate directly.`);
+    } catch(e) {
+        console.error("Pointercrate fetch failed:", e);
+    }
+    setIsFetchingDemons(false);
+
     const id = Math.random().toString(36).substring(2, 8).toUpperCase();
     setRoomId(id);
     setRoomData(null); // Reset room data for new lobby
-    socketRef.current.emit('joinRoom', { roomId: id, username, isHost: true });
+    socketRef.current.emit('joinRoom', { roomId: id, username, isHost: true, customDemons });
     setView('lobby');
   };
 
@@ -141,10 +164,10 @@ function App() {
               <button 
                 className="btn btn-primary" 
                 onClick={handleCreateRoom}
-                disabled={!isConnected}
-                style={{ opacity: isConnected ? 1 : 0.5 }}
+                disabled={!isConnected || isFetchingDemons}
+                style={{ opacity: (isConnected && !isFetchingDemons) ? 1 : 0.5 }}
               > 
-                HOST LOBBY 
+                {isFetchingDemons ? 'FETCHING POINTERCRATE...' : 'HOST LOBBY'} 
               </button>
               <div style={{ display: 'flex' }}>
                 <input placeholder="ROOM ID" value={roomId} onChange={(e) => setRoomId(e.target.value.toUpperCase())} style={{ width: '120px', borderRadius: '12px 0 0 12px', borderRight: 'none' }} />

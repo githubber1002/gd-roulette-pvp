@@ -102,58 +102,41 @@ const io = new Server(server, {
 let rooms = {};
 let modTokens = {}; // Maps token -> { roomId, socketId, username }
 
-const fs = require('fs');
-const path = require('path');
-
-// Helper to fetch demons
-function getDemons() {
-  try {
-    const demonsPath = path.join(__dirname, 'demons.json');
-    if (fs.existsSync(demonsPath)) {
-      const data = fs.readFileSync(demonsPath, 'utf8');
-      const allDemons = JSON.parse(data);
-      console.log(`SUCCESS: Loaded ${allDemons.length} demons from local cache.`);
-      return { demons: allDemons, isLive: true };
-    }
-    throw new Error("demons.json not found");
-  } catch (error) {
-    console.error("Local Cache issue:", error.message);
-    
-    // Fallback if the file is missing or corrupted
-    const massiveFallback = [
-      { name: "Bloodlust", publisher: { name: "Knobbelboy" } },
-      { name: "Tartarus", publisher: { name: "Riot" } },
-      { name: "Zodiac", publisher: { name: "Bianox" } },
-      { name: "Yatagarasu", publisher: { name: "Trusta" } },
-      { name: "Cataclysm", publisher: { name: "GGBoy" } },
-      { name: "Acheron", publisher: { name: "Riot" } },
-      { name: "Slaughterhouse", publisher: { name: "IcedCave" } },
-      { name: "Firework", publisher: { name: "CherryTeam" } },
-      { name: "Mainframe", publisher: { name: "Zebus" } },
-      { name: "Sonic Wave", publisher: { name: "Sunix" } },
-      { name: "Limbo", publisher: { name: "MindCap" } },
-      { name: "Kenos", publisher: { name: "Bianox" } },
-      { name: "The Golden", publisher: { name: "Bo" } },
-      { name: "Sakupen Circles", publisher: { name: "Nick136" } },
-      { name: "Abyss of Darkness", publisher: { name: "Exen" } },
-      { name: "Trueffet", publisher: { name: "Synergi" } },
-      { name: "Hard Machine", publisher: { name: "Komek" } },
-      { name: "VSC", publisher: { name: "Cursed" } },
-      { name: "Silent Clubstep", publisher: { name: "Paqoe" } },
-      { name: "Azure Flare", publisher: { name: "Slayer" } },
-      { name: "Eternal Night", publisher: { name: "CherryTeam" } },
-      { name: "Oblivion", publisher: { name: "Dizzy" } },
-      { name: "Sinister Silence", publisher: { name: "Eternity" } },
-      { name: "Kyouki", publisher: { name: "Demishow" } },
-      { name: "Poocubed", publisher: { name: "PooBear" } },
-      { name: "Fragile", publisher: { name: "Nova" } },
-      { name: "Cognition", publisher: { name: "EndLevel" } },
-      { name: "Renevant", publisher: { name: "Nikro" } },
-      { name: "Thinking Space", publisher: { name: "Hideki" } },
-      { name: "Promethean", publisher: { name: "EndLevel" } }
-    ];
-    return { demons: massiveFallback, isLive: false };
-  }
+// Helper for fallback demons
+function getFallbackDemons() {
+  const massiveFallback = [
+    { name: "Bloodlust", publisher: { name: "Knobbelboy" } },
+    { name: "Tartarus", publisher: { name: "Riot" } },
+    { name: "Zodiac", publisher: { name: "Bianox" } },
+    { name: "Yatagarasu", publisher: { name: "Trusta" } },
+    { name: "Cataclysm", publisher: { name: "GGBoy" } },
+    { name: "Acheron", publisher: { name: "Riot" } },
+    { name: "Slaughterhouse", publisher: { name: "IcedCave" } },
+    { name: "Firework", publisher: { name: "CherryTeam" } },
+    { name: "Mainframe", publisher: { name: "Zebus" } },
+    { name: "Sonic Wave", publisher: { name: "Sunix" } },
+    { name: "Limbo", publisher: { name: "MindCap" } },
+    { name: "Kenos", publisher: { name: "Bianox" } },
+    { name: "The Golden", publisher: { name: "Bo" } },
+    { name: "Sakupen Circles", publisher: { name: "Nick136" } },
+    { name: "Abyss of Darkness", publisher: { name: "Exen" } },
+    { name: "Trueffet", publisher: { name: "Synergi" } },
+    { name: "Hard Machine", publisher: { name: "Komek" } },
+    { name: "VSC", publisher: { name: "Cursed" } },
+    { name: "Silent Clubstep", publisher: { name: "Paqoe" } },
+    { name: "Azure Flare", publisher: { name: "Slayer" } },
+    { name: "Eternal Night", publisher: { name: "CherryTeam" } },
+    { name: "Oblivion", publisher: { name: "Dizzy" } },
+    { name: "Sinister Silence", publisher: { name: "Eternity" } },
+    { name: "Kyouki", publisher: { name: "Demishow" } },
+    { name: "Poocubed", publisher: { name: "PooBear" } },
+    { name: "Fragile", publisher: { name: "Nova" } },
+    { name: "Cognition", publisher: { name: "EndLevel" } },
+    { name: "Renevant", publisher: { name: "Nikro" } },
+    { name: "Thinking Space", publisher: { name: "Hideki" } },
+    { name: "Promethean", publisher: { name: "EndLevel" } }
+  ];
+  return massiveFallback;
 }
 
 function shuffle(array) {
@@ -169,16 +152,26 @@ function shuffle(array) {
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  socket.on('joinRoom', async ({ roomId, username, isHost }) => {
+  socket.on('joinRoom', async ({ roomId, username, isHost, customDemons }) => {
     socket.join(roomId);
     socket.username = username;
     socket.roomId = roomId;
 
     if (!rooms[roomId]) {
-      const { demons, isLive } = await getDemons();
+      let isLive = false;
+      let demonsToUse = [];
+
+      if (customDemons && Array.isArray(customDemons) && customDemons.length > 0) {
+        demonsToUse = customDemons;
+        isLive = true;
+      } else {
+        demonsToUse = getFallbackDemons();
+        isLive = false;
+      }
+
       rooms[roomId] = {
         players: [],
-        demonList: shuffle([...demons]),
+        demonList: shuffle([...demonsToUse]),
         currentIndex: 0,
         currentPercent: 1,
         isStarted: false,
