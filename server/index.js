@@ -6,9 +6,86 @@ const axios = require('axios');
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 app.get('/', (req, res) => {
   res.send('GD Roulette PVP Server is ACTIVE! Use the frontend on port 5173 to play.');
+});
+
+// MOD API ENDPOINTS
+app.post('/api/mod/connect', (req, res) => {
+  const { token } = req.body;
+  if (!token || !modTokens[token]) {
+    return res.status(401).json({ error: 'Invalid or missing token' });
+  }
+  
+  const playerData = modTokens[token];
+  const room = rooms[playerData.roomId];
+  
+  if (room) {
+    const player = room.players.find(p => p.id === playerData.socketId);
+    if (player) {
+      player.modVerified = true;
+      io.to(playerData.roomId).emit('roomUpdate', room);
+      io.to(playerData.roomId).emit('modConnected', { username: player.username });
+      return res.json({ success: true, message: 'Connected to room ' + playerData.roomId });
+    }
+  }
+  
+  return res.status(404).json({ error: 'Room or player not found' });
+});
+
+app.post('/api/mod/report', (req, res) => {
+  const { token, levelName, percent, completed } = req.body;
+  
+  if (!token || !modTokens[token]) {
+    return res.status(401).json({ error: 'Invalid or missing token' });
+  }
+
+  const playerData = modTokens[token];
+  const room = rooms[playerData.roomId];
+  
+  if (!room || !room.isStarted) {
+    return res.status(400).json({ error: 'Room not active' });
+  }
+
+  const currentLevel = room.demonList[room.currentIndex];
+  if (!currentLevel) {
+    return res.status(400).json({ error: 'No active level' });
+  }
+
+  // Auto-advance if they meet the required percentage or completed it
+  // Notice we use the `completed` flag or check if their percent is high enough.
+  if (percent >= room.currentPercent || completed) {
+    const now = Date.now();
+    if (room.lastBeaten && now - room.lastBeaten < 2000) {
+      return res.status(429).json({ error: 'Rate limit' });
+    }
+    room.lastBeaten = now;
+
+    room.history.unshift({ ...currentLevel, percentNeeded: room.currentPercent, beatenBy: playerData.username });
+    
+    // Award points
+    const player = room.players.find(p => p.id === playerData.socketId);
+    if (player) {
+        player.score += room.currentPercent;
+    }
+
+    room.currentIndex += 1;
+    room.currentPercent += 1;
+    
+    if (room.currentPercent > 100) {
+        io.to(playerData.roomId).emit('gameOver', { winner: playerData.username });
+    } else {
+        io.to(playerData.roomId).emit('levelBeatenAnnounce', { username: playerData.username, levelName: currentLevel.name });
+        room.skipVotes = [];
+        io.to(playerData.roomId).emit('roomUpdate', room);
+    }
+    
+    return res.json({ success: true, message: 'Progress recorded' });
+  }
+
+  return res.json({ success: true, message: 'Progress ignored (insufficient percent)' });
 });
 
 const server = http.createServer(app);
@@ -20,6 +97,7 @@ const io = new Server(server, {
 });
 
 let rooms = {};
+let modTokens = {}; // Maps token -> { roomId, socketId, username }
 
 // Helper to fetch demons
 async function getDemons() {
@@ -177,10 +255,37 @@ io.on('connection', (socket) => {
       console.log(`Lobby ${roomId} initialized with ${rooms[roomId].demonList.length} shuffled demons. API Live: ${isLive}`);
     }
     
-    const player = { id: socket.id, username, isHost, score: 0 };
+    const player = { id: socket.id, username, isHost, score: 0, modVerified: false };
     rooms[roomId].players.push(player);
     
     io.to(roomId).emit('roomUpdate', rooms[roomId]);
+  });
+
+  socket.on('setRequireMod', ({ roomId, requireMod }) => {
+    const room = rooms[roomId];
+    if (room && !room.isStarted) {
+      room.requireMod = requireMod;
+      
+      // Generate tokens for all players when enabling mod requirement
+      if (requireMod) {
+        room.players.forEach(p => {
+          const token = 'GD-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+          p.modToken = token;
+          modTokens[token] = { roomId, socketId: p.id, username: p.username };
+        });
+      } else {
+        // Clear tokens when disabling
+        room.players.forEach(p => {
+          if (p.modToken) {
+            delete modTokens[p.modToken];
+            delete p.modToken;
+          }
+          p.modVerified = false;
+        });
+      }
+      
+      io.to(roomId).emit('roomUpdate', room);
+    }
   });
 
   socket.on('startGame', (roomId) => {
@@ -193,6 +298,12 @@ io.on('connection', (socket) => {
   socket.on('levelBeaten', (roomId) => {
     const room = rooms[roomId];
     if (room) {
+      // If mod is required, block manual browser submissions
+      if (room.requireMod) {
+        console.log(`Blocked manual levelBeaten in verified room ${roomId}`);
+        return;
+      }
+      
       const now = Date.now();
       // 4.5 second buffer to prevent race conditions/double-clicking
       if (room.lastBeaten && now - room.lastBeaten < 4500) {

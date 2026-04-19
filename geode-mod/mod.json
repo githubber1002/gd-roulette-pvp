@@ -1,0 +1,25 @@
+{
+    "geode": "5.6.1",
+    "gd": {
+        "win": "2.2074"
+    },
+    "id": "githubber1002.roulette-sync",
+    "name": "Roulette Sync",
+    "version": "v1.0.0",
+    "developer": "githubber1002",
+    "description": "Syncs your Geometry Dash progress with the GD Roulette PvP website for verified competitive play.",
+    "settings": {
+        "server-url": {
+            "name": "Server URL",
+            "description": "The URL of your Roulette PvP server",
+            "type": "string",
+            "default": "https://gd-roulette-pvp-production.up.railway.app"
+        },
+        "token": {
+            "name": "Connection Token",
+            "description": "Paste the token from the website lobby here",
+            "type": "string",
+            "default": ""
+        }
+    }
+}

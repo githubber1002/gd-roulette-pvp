@@ -112,6 +112,10 @@ function App() {
     if (socketRef.current) socketRef.current.emit('requestSkip', roomId);
   };
 
+  const handleRequireModChange = (e) => {
+    if (socketRef.current) socketRef.current.emit('setRequireMod', { roomId, requireMod: e.target.checked });
+  };
+
   return (
     <div className="app-container">
       <AnimatePresence mode="wait">
@@ -197,9 +201,33 @@ function App() {
                             <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: p.isHost ? 'var(--accent)' : 'var(--text-dim)' }}></div>
                              <div style={{ flex: 1 }}>{p.username}</div>
                              <div style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{p.score} PTS</div>
+                             {roomData.requireMod && (
+                                <div style={{ fontSize: '0.7rem', color: p.modVerified ? '#00ff00' : '#ffaa00' }}>
+                                  {p.modVerified ? '✅ VERIFIED' : '⏳ WAITING...'}
+                                </div>
+                             )}
                         </div>
                     ))}
                 </div>
+
+                {roomData.requireMod && roomData.players.map(p => {
+                    if (p.id === socketRef.current?.id) {
+                        return (
+                            <div key="token" style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>YOUR MOD TOKEN</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent)', letterSpacing: '2px' }}>{p.modToken}</div>
+                            </div>
+                        );
+                    }
+                    return null;
+                })}
+
+                {roomData.players.some(p => p.id === socketRef.current?.id && p.isHost) && (
+                    <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input type="checkbox" id="requireMod" checked={!!roomData.requireMod} onChange={handleRequireModChange} />
+                        <label htmlFor="requireMod" style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>🛡️ Require Geode Mod Verification</label>
+                    </div>
+                )}
 
                 {roomData.players.some(p => p.id === socketRef.current?.id && p.isHost) ? (
                     <button className="btn btn-primary" onClick={startGame}> START GAME </button>
@@ -237,14 +265,22 @@ function App() {
                         <div className="percent-label">REQUIRED TO ADVANCE</div>
                         <h1 style={{ fontSize: '2.5rem', wordBreak: 'break-word' }}>{roomData.demonList[roomData.currentIndex]?.name}</h1>
                         <p style={{ color: 'var(--text-dim)' }}>by {roomData.demonList[roomData.currentIndex]?.publisher?.name}</p>
-                        <button 
-                            className="btn btn-success" 
-                            onClick={markBeaten} 
-                            style={{ marginTop: '2rem', width: '100%', opacity: cooldown > 0 ? 0.5 : 1 }} 
-                            disabled={cooldown > 0}
-                        > 
-                            {cooldown > 0 ? `COOLDOWN (${cooldown}s)` : `I GOT ${roomData.currentPercent}%!`}
-                        </button>
+                        
+                        {roomData.requireMod ? (
+                            <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(0, 242, 255, 0.1)', borderRadius: '8px', color: 'var(--accent)' }}>
+                                <Loader2 size={24} className="pulsing" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '10px' }} />
+                                <span>WAITING FOR IN-GAME COMPLETION...</span>
+                            </div>
+                        ) : (
+                            <button 
+                                className="btn btn-success" 
+                                onClick={markBeaten} 
+                                style={{ marginTop: '2rem', width: '100%', opacity: cooldown > 0 ? 0.5 : 1 }} 
+                                disabled={cooldown > 0}
+                            > 
+                                {cooldown > 0 ? `COOLDOWN (${cooldown}s)` : `I GOT ${roomData.currentPercent}%!`}
+                            </button>
+                        )}
 
                         <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                              <button 
