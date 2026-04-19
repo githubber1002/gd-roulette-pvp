@@ -102,86 +102,58 @@ const io = new Server(server, {
 let rooms = {};
 let modTokens = {}; // Maps token -> { roomId, socketId, username }
 
+const fs = require('fs');
+const path = require('path');
+
 // Helper to fetch demons
-async function getDemons() {
-  const bridgeUrl = 'https://gd-roulette-pvp.vercel.app/api/get-demons';
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'application/json'
-  };
-
-  // 1. TRY THE VERCEL BRIDGE
+function getDemons() {
   try {
-    const bridgeResponse = await axios.get(bridgeUrl, { timeout: 8000 });
-    if (bridgeResponse.data && Array.isArray(bridgeResponse.data)) {
-      return { demons: bridgeResponse.data, isLive: true };
+    const demonsPath = path.join(__dirname, 'demons.json');
+    if (fs.existsSync(demonsPath)) {
+      const data = fs.readFileSync(demonsPath, 'utf8');
+      const allDemons = JSON.parse(data);
+      console.log(`SUCCESS: Loaded ${allDemons.length} demons from local cache.`);
+      return { demons: allDemons, isLive: true };
     }
-  } catch (err) {
-    console.log("Vercel Bridge down, trying direct...");
+    throw new Error("demons.json not found");
+  } catch (error) {
+    console.error("Local Cache issue:", error.message);
+    
+    // Fallback if the file is missing or corrupted
+    const massiveFallback = [
+      { name: "Bloodlust", publisher: { name: "Knobbelboy" } },
+      { name: "Tartarus", publisher: { name: "Riot" } },
+      { name: "Zodiac", publisher: { name: "Bianox" } },
+      { name: "Yatagarasu", publisher: { name: "Trusta" } },
+      { name: "Cataclysm", publisher: { name: "GGBoy" } },
+      { name: "Acheron", publisher: { name: "Riot" } },
+      { name: "Slaughterhouse", publisher: { name: "IcedCave" } },
+      { name: "Firework", publisher: { name: "CherryTeam" } },
+      { name: "Mainframe", publisher: { name: "Zebus" } },
+      { name: "Sonic Wave", publisher: { name: "Sunix" } },
+      { name: "Limbo", publisher: { name: "MindCap" } },
+      { name: "Kenos", publisher: { name: "Bianox" } },
+      { name: "The Golden", publisher: { name: "Bo" } },
+      { name: "Sakupen Circles", publisher: { name: "Nick136" } },
+      { name: "Abyss of Darkness", publisher: { name: "Exen" } },
+      { name: "Trueffet", publisher: { name: "Synergi" } },
+      { name: "Hard Machine", publisher: { name: "Komek" } },
+      { name: "VSC", publisher: { name: "Cursed" } },
+      { name: "Silent Clubstep", publisher: { name: "Paqoe" } },
+      { name: "Azure Flare", publisher: { name: "Slayer" } },
+      { name: "Eternal Night", publisher: { name: "CherryTeam" } },
+      { name: "Oblivion", publisher: { name: "Dizzy" } },
+      { name: "Sinister Silence", publisher: { name: "Eternity" } },
+      { name: "Kyouki", publisher: { name: "Demishow" } },
+      { name: "Poocubed", publisher: { name: "PooBear" } },
+      { name: "Fragile", publisher: { name: "Nova" } },
+      { name: "Cognition", publisher: { name: "EndLevel" } },
+      { name: "Renevant", publisher: { name: "Nikro" } },
+      { name: "Thinking Space", publisher: { name: "Hideki" } },
+      { name: "Promethean", publisher: { name: "EndLevel" } }
+    ];
+    return { demons: massiveFallback, isLive: false };
   }
-
-  // 2. TRY DIRECT FETCH WITH PARTIAL SUCCESS SUPPORT
-  let allDemons = [];
-  const pages = [
-    'https://pointercrate.com/api/v2/demons/listed/?limit=100',
-    'https://pointercrate.com/api/v2/demons/listed/?limit=100&after=100',
-    'https://pointercrate.com/api/v2/demons/listed/?limit=100&after=200'
-  ];
-
-  for (let i = 0; i < pages.length; i++) {
-    try {
-      console.log(`Fetching Pointercrate Page ${i+1}...`);
-      const res = await axios.get(pages[i], { headers, timeout: 5000 });
-      if (res.data && Array.isArray(res.data)) {
-        allDemons = [...allDemons, ...res.data];
-      }
-      await new Promise(r => setTimeout(r, 800)); // Be gentle
-    } catch (err) {
-      console.error(`Page ${i+1} failed: ${err.message}`);
-      break; // Exit loop if we hit a block
-    }
-  }
-
-  if (allDemons.length > 0) {
-    console.log(`SUCCESS: Fetched ${allDemons.length} live demons.`);
-    return { demons: allDemons, isLive: true };
-  }
-
-  // 3. FALLBACK (Hardcoded)
-  console.log("CRITICAL: All live sources failed. Using Backup Data.");
-  const massiveFallback = [
-    { name: "Bloodlust", publisher: { name: "Knobbelboy" } },
-    { name: "Tartarus", publisher: { name: "Riot" } },
-    { name: "Zodiac", publisher: { name: "Bianox" } },
-    { name: "Yatagarasu", publisher: { name: "Trusta" } },
-    { name: "Cataclysm", publisher: { name: "GGBoy" } },
-    { name: "Acheron", publisher: { name: "Riot" } },
-    { name: "Slaughterhouse", publisher: { name: "IcedCave" } },
-    { name: "Firework", publisher: { name: "CherryTeam" } },
-    { name: "Mainframe", publisher: { name: "Zebus" } },
-    { name: "Sonic Wave", publisher: { name: "Sunix" } },
-    { name: "Limbo", publisher: { name: "MindCap" } },
-    { name: "Kenos", publisher: { name: "Bianox" } },
-    { name: "The Golden", publisher: { name: "Bo" } },
-    { name: "Sakupen Circles", publisher: { name: "Nick136" } },
-    { name: "Abyss of Darkness", publisher: { name: "Exen" } },
-    { name: "Trueffet", publisher: { name: "Synergi" } },
-    { name: "Hard Machine", publisher: { name: "Komek" } },
-    { name: "VSC", publisher: { name: "Cursed" } },
-    { name: "Silent Clubstep", publisher: { name: "Paqoe" } },
-    { name: "Azure Flare", publisher: { name: "Slayer" } },
-    { name: "Eternal Night", publisher: { name: "CherryTeam" } },
-    { name: "Oblivion", publisher: { name: "Dizzy" } },
-    { name: "Sinister Silence", publisher: { name: "Eternity" } },
-    { name: "Kyouki", publisher: { name: "Demishow" } },
-    { name: "Poocubed", publisher: { name: "PooBear" } },
-    { name: "Fragile", publisher: { name: "Nova" } },
-    { name: "Cognition", publisher: { name: "EndLevel" } },
-    { name: "Renevant", publisher: { name: "Nikro" } },
-    { name: "Thinking Space", publisher: { name: "Hideki" } },
-    { name: "Promethean", publisher: { name: "EndLevel" } }
-  ];
-  return { demons: massiveFallback, isLive: false };
 }
 
 function shuffle(array) {
