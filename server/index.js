@@ -39,7 +39,7 @@ app.post('/api/mod/connect', (req, res) => {
 });
 
 app.post('/api/mod/report', (req, res) => {
-  const { token, levelName, percent, completed } = req.body;
+  const { token, levelName, levelId, percent, completed } = req.body;
   
   if (!token || !modTokens[token]) {
     return res.status(401).json({ error: 'Invalid or missing token' });
@@ -57,8 +57,16 @@ app.post('/api/mod/report', (req, res) => {
     return res.status(400).json({ error: 'No active level' });
   }
 
+  // ID ENFORCEMENT: Check if the reported level ID matches the current target
+  // We check both level_id (Pointercrate) and id (Pointercrate fallback)
+  const targetId = currentLevel.level_id || currentLevel.id;
+  
+  if (levelId && targetId && parseInt(levelId) !== parseInt(targetId)) {
+    console.warn(`[CHEAT DETECTED] ${playerData.username} reported progress on level ID ${levelId}, but target is ${currentLevel.name} (ID: ${targetId})`);
+    return res.status(403).json({ error: 'Level ID mismatch - incorrect level being played' });
+  }
+
   // Auto-advance if they meet the required percentage or completed it
-  // Notice we use the `completed` flag or check if their percent is high enough.
   if (percent >= room.currentPercent || completed) {
     const now = Date.now();
     if (room.lastBeaten && now - room.lastBeaten < 2000) {
@@ -105,36 +113,36 @@ let modTokens = {}; // Maps token -> { roomId, socketId, username }
 // Helper for fallback demons
 function getFallbackDemons() {
   const massiveFallback = [
-    { name: "Bloodlust", publisher: { name: "Knobbelboy" } },
-    { name: "Tartarus", publisher: { name: "Riot" } },
-    { name: "Zodiac", publisher: { name: "Bianox" } },
-    { name: "Yatagarasu", publisher: { name: "Trusta" } },
-    { name: "Cataclysm", publisher: { name: "GGBoy" } },
-    { name: "Acheron", publisher: { name: "Riot" } },
-    { name: "Slaughterhouse", publisher: { name: "IcedCave" } },
-    { name: "Firework", publisher: { name: "CherryTeam" } },
-    { name: "Mainframe", publisher: { name: "Zebus" } },
-    { name: "Sonic Wave", publisher: { name: "Sunix" } },
-    { name: "Limbo", publisher: { name: "MindCap" } },
-    { name: "Kenos", publisher: { name: "Bianox" } },
-    { name: "The Golden", publisher: { name: "Bo" } },
-    { name: "Sakupen Circles", publisher: { name: "Nick136" } },
-    { name: "Abyss of Darkness", publisher: { name: "Exen" } },
-    { name: "Trueffet", publisher: { name: "Synergi" } },
-    { name: "Hard Machine", publisher: { name: "Komek" } },
-    { name: "VSC", publisher: { name: "Cursed" } },
-    { name: "Silent Clubstep", publisher: { name: "Paqoe" } },
-    { name: "Azure Flare", publisher: { name: "Slayer" } },
-    { name: "Eternal Night", publisher: { name: "CherryTeam" } },
-    { name: "Oblivion", publisher: { name: "Dizzy" } },
-    { name: "Sinister Silence", publisher: { name: "Eternity" } },
-    { name: "Kyouki", publisher: { name: "Demishow" } },
-    { name: "Poocubed", publisher: { name: "PooBear" } },
-    { name: "Fragile", publisher: { name: "Nova" } },
-    { name: "Cognition", publisher: { name: "EndLevel" } },
-    { name: "Renevant", publisher: { name: "Nikro" } },
-    { name: "Thinking Space", publisher: { name: "Hideki" } },
-    { name: "Promethean", publisher: { name: "EndLevel" } }
+    { name: "Bloodlust", level_id: 35140325, publisher: { name: "Knobbelboy" } },
+    { name: "Tartarus", level_id: 56616053, publisher: { name: "Riot" } },
+    { name: "Zodiac", level_id: 51221051, publisher: { name: "Bianox" } },
+    { name: "Yatagarasu", level_id: 28405022, publisher: { name: "Trusta" } },
+    { name: "Cataclysm", level_id: 391901, publisher: { name: "GGBoy" } },
+    { name: "Acheron", level_id: 82436340, publisher: { name: "Riot" } },
+    { name: "Slaughterhouse", level_id: 74681602, publisher: { name: "IcedCave" } },
+    { name: "Firework", level_id: 74682025, publisher: { name: "CherryTeam" } },
+    { name: "Mainframe", level_id: 83030467, publisher: { name: "Zebus" } },
+    { name: "Sonic Wave", level_id: 25482315, publisher: { name: "Sunix" } },
+    { name: "Limbo", level_id: 85651581, publisher: { name: "MindCap" } },
+    { name: "Kenos", level_id: 58140417, publisher: { name: "Bianox" } },
+    { name: "The Golden", level_id: 60925841, publisher: { name: "Bo" } },
+    { name: "Sakupen Circles", level_id: 77146522, publisher: { name: "Nick136" } },
+    { name: "Abyss of Darkness", level_id: 79354065, publisher: { name: "Exen" } },
+    { name: "Trueffet", level_id: 73062638, publisher: { name: "Synergi" } },
+    { name: "Hard Machine", level_id: 70877960, publisher: { name: "Komek" } },
+    { name: "VSC", level_id: 74345293, publisher: { name: "Cursed" } },
+    { name: "Silent Clubstep", level_id: 81861343, publisher: { name: "Paqoe" } },
+    { name: "Azure Flare", level_id: 82956105, publisher: { name: "Slayer" } },
+    { name: "Eternal Night", level_id: 81861456, publisher: { name: "CherryTeam" } },
+    { name: "Oblivion", level_id: 82255745, publisher: { name: "Dizzy" } },
+    { name: "Sinister Silence", level_id: 83464522, publisher: { name: "Eternity" } },
+    { name: "Kyouki", level_id: 84646525, publisher: { name: "Demishow" } },
+    { name: "Poocubed", level_id: 84646525, publisher: { name: "PooBear" } },
+    { name: "Fragile", level_id: 65161405, publisher: { name: "Nova" } },
+    { name: "Cognition", level_id: 59714856, publisher: { name: "EndLevel" } },
+    { name: "Renevant", level_id: 57577543, publisher: { name: "Nikro" } },
+    { name: "Thinking Space", level_id: 58197176, publisher: { name: "Hideki" } },
+    { name: "Promethean", level_id: 58210332, publisher: { name: "EndLevel" } }
   ];
   return massiveFallback;
 }

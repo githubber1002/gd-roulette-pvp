@@ -5,7 +5,7 @@
     },
     "id": "githubber1002.roulette-sync",
     "name": "Roulette Sync",
-    "version": "v1.0.0",
+    "version": "v1.0.3",
     "developer": "githubber1002",
     "description": "Syncs your Geometry Dash progress with the GD Roulette PvP website for verified competitive play.",
     "settings": {

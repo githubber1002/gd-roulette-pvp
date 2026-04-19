@@ -7,6 +7,7 @@ using namespace geode::prelude;
 // Global state for the mod
 static bool g_isConnected = false;
 static std::string g_currentLevelName = "";
+static int g_currentLevelID = 0;
 static int g_lastReportedPercent = 0;
 
 // Helper to get the server URL from settings
@@ -38,7 +39,7 @@ std::string getToken() {
 #include <thread>
 
 // Send a completion/death report to the server
-void reportToServer(const std::string& levelName, int percent, bool completed) {
+void reportToServer(const std::string& levelName, int levelId, int percent, bool completed) {
     auto token = getToken();
     if (token.empty()) {
         log::warn("No token set! Cannot report to server.");
@@ -58,6 +59,7 @@ void reportToServer(const std::string& levelName, int percent, bool completed) {
         matjson::Value body;
         body["token"] = tokenStr;
         body["levelName"] = levelStr;
+        body["levelId"] = levelId;
         body["percent"] = percent;
         body["completed"] = completed;
         req.bodyJSON(body);
@@ -132,8 +134,9 @@ class $modify(RoulettePlayLayer, PlayLayer) {
             return false;
         }
 
-        // Store the level name for reporting
+        // Store the level info for reporting
         g_currentLevelName = std::string(level->m_levelName);
+        g_currentLevelID = level->m_levelID;
         g_lastReportedPercent = 0;
 
         log::info("Level loaded: {}", g_currentLevelName);
@@ -156,7 +159,7 @@ class $modify(RoulettePlayLayer, PlayLayer) {
         // Only report if it's higher than our last report (avoid spam on quick restarts)
         if (currentPercent > g_lastReportedPercent && g_isConnected) {
             g_lastReportedPercent = currentPercent;
-            reportToServer(g_currentLevelName, currentPercent, false);
+            reportToServer(g_currentLevelName, g_currentLevelID, currentPercent, false);
         }
 
         PlayLayer::destroyPlayer(player, obj);
@@ -167,7 +170,7 @@ class $modify(RoulettePlayLayer, PlayLayer) {
         log::info("Level COMPLETE: {}", g_currentLevelName);
 
         if (g_isConnected) {
-            reportToServer(g_currentLevelName, 100, true);
+            reportToServer(g_currentLevelName, g_currentLevelID, 100, true);
         }
 
         PlayLayer::levelComplete();
