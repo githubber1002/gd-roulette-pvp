@@ -62,7 +62,8 @@ function App() {
     });
 
     socket.on('levelBeatenAnnounce', ({ username, levelName }) => {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+        const audio = new Audio('https://www.myinstants.com/media/sounds/level-up-sonido-original.mp3');
+        audio.volume = 1.0;
         audio.play().catch(e => console.log("Audio play blocked:", e));
     });
 
