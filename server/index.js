@@ -120,7 +120,7 @@ async function getDemons() {
     console.log("Vercel Bridge down, trying direct...");
   }
 
-  // 2. TRY DIRECT FETCH WITH PROXY BYPASS AND PARTIAL SUCCESS SUPPORT
+  // 2. TRY DIRECT FETCH WITH PARTIAL SUCCESS SUPPORT
   let allDemons = [];
   const pages = [
     'https://pointercrate.com/api/v2/demons/listed/?limit=100',
@@ -130,15 +130,14 @@ async function getDemons() {
 
   for (let i = 0; i < pages.length; i++) {
     try {
-      console.log(`Fetching Pointercrate Page ${i+1} via proxy...`);
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(pages[i])}`;
-      const res = await axios.get(proxyUrl, { headers, timeout: 8000 });
+      console.log(`Fetching Pointercrate Page ${i+1}...`);
+      const res = await axios.get(pages[i], { headers, timeout: 5000 });
       if (res.data && Array.isArray(res.data)) {
         allDemons = [...allDemons, ...res.data];
       }
       await new Promise(r => setTimeout(r, 800)); // Be gentle
     } catch (err) {
-      console.error(`Page ${i+1} proxy failed: ${err.message}`);
+      console.error(`Page ${i+1} failed: ${err.message}`);
       break; // Exit loop if we hit a block
     }
   }

@@ -4,17 +4,16 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   try {
-    console.log("Bridge: Fetching Top 300 via AllOrigins Proxy...");
+    const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+    console.log("Bridge: Fetching Top 300 Native...");
     
     const fetchPage = async (after) => {
       const url = `https://pointercrate.com/api/v2/demons/listed/?limit=100${after ? `&after=${after}` : ''}`;
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-      const response = await fetch(proxyUrl);
-      if (!response.ok) throw new Error(`Proxy error: ${response.status}`);
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error(`Pointercrate error: ${response.status}`);
       return await response.json();
     };
 
-    // Fetch pages concurrently to save Vercel execution time
     const [page1, page2, page3] = await Promise.all([
       fetchPage(0).catch(() => []),
       fetchPage(100).catch(() => []),
@@ -27,7 +26,7 @@ export default async function handler(req, res) {
     if (Array.isArray(page3)) allData.push(...page3);
 
     if (allData.length === 0) {
-      throw new Error("Proxy returned no data");
+      throw new Error("No data returned from Pointercrate");
     }
 
     res.status(200).json(allData);
