@@ -17,6 +17,11 @@ function App() {
   const [isFetchingDemons, setIsFetchingDemons] = useState(false);
   
   const socketRef = useRef(null);
+  const victorySound = useRef(new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3'));
+
+  useEffect(() => {
+    victorySound.current.load();
+  }, []);
 
   useEffect(() => {
     // Listen for public tunnel URL from Electron
@@ -62,9 +67,11 @@ function App() {
     });
 
     socket.on('levelBeatenAnnounce', ({ username, levelName }) => {
-        const audio = new Audio('https://www.myinstants.com/media/sounds/level-up-sonido-original.mp3');
-        audio.volume = 1.0;
-        audio.play().catch(e => console.log("Audio play blocked:", e));
+        if (victorySound.current) {
+            victorySound.current.currentTime = 0;
+            victorySound.current.volume = 1.0;
+            victorySound.current.play().catch(e => console.log("Audio play blocked:", e));
+        }
     });
 
     return () => {
