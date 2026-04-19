@@ -15,44 +15,51 @@ function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [isFetchingDemons, setIsFetchingDemons] = useState(false);
+  
   const socketRef = useRef(null);
   const audioContextRef = useRef(null);
+  const gainNodeRef = useRef(null);
   const audioBufferRef = useRef(null);
 
-  // Pre-load and decode the audio for instant, loud playback
+  // Initialize Web Audio API for SUPER LOUD sound
   useEffect(() => {
-    const initAudio = async () => {
-        try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioContextRef.current = new AudioContext();
-            
-            const response = await fetch('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
-            const arrayBuffer = await response.arrayBuffer();
-            audioBufferRef.current = await audioContextRef.current.decodeAudioData(arrayBuffer);
-        } catch (e) {
-            console.error("Audio pre-load failed:", e);
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioContextRef.current = new AudioContext();
+    gainNodeRef.current = audioContextRef.current.createGain();
+    gainNodeRef.current.gain.value = 4.0; // 400% Volume (Bass Boosted style)
+    gainNodeRef.current.connect(audioContextRef.current.destination);
+
+    // Fetch and decode the first sound (Mixkit one)
+    fetch('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3')
+      .then(response => response.arrayBuffer())
+      .then(arrayBuffer => audioContextRef.current.decodeAudioData(arrayBuffer))
+      .then(audioBuffer => {
+        audioBufferRef.current = audioBuffer;
+        console.log("Super Loud sound preloaded and decoded.");
+      })
+      .catch(e => console.error("Failed to load sound:", e));
+
+    // Resume context on first user interaction (browser policy)
+    const resume = () => {
+        if (audioContextRef.current?.state === 'suspended') {
+            audioContextRef.current.resume();
         }
     };
-    initAudio();
+    window.addEventListener('click', resume);
+    return () => window.removeEventListener('click', resume);
   }, []);
 
-  const playVictorySound = () => {
-    if (!audioContextRef.current || !audioBufferRef.current) return;
-
-    // Create a new source for every play (allows overlapping)
-    const source = audioContextRef.current.createBufferSource();
-    source.buffer = audioBufferRef.current;
-
-    // BASS BOOST / AMPLIFY: Create a gain node and set it to a high value
-    const gainNode = audioContextRef.current.createGain();
-    gainNode.gain.value = 4.0; // 400% volume / basic "Bass Boost"
-
-    source.connect(gainNode);
-    gainNode.connect(audioContextRef.current.destination);
-
+  const playLoudSound = () => {
+    if (!audioContextRef.current || !audioBufferRef.current || !gainNodeRef.current) return;
+    
+    // Resume context if needed
     if (audioContextRef.current.state === 'suspended') {
         audioContextRef.current.resume();
     }
+
+    const source = audioContextRef.current.createBufferSource();
+    source.buffer = audioBufferRef.current;
+    source.connect(gainNodeRef.current);
     source.start(0);
   };
 
@@ -100,7 +107,7 @@ function App() {
     });
 
     socket.on('levelBeatenAnnounce', ({ username, levelName }) => {
-        playVictorySound();
+        playLoudSound();
     });
 
     return () => {
